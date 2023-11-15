@@ -14,5 +14,5 @@ class Field:
         for row in self.cells:
             print(*[cell.image for cell in row])
 
-MyClass = Field()
-MyClass.drawrows()
+AntEater = Field()
+AntEater.drawrows()
