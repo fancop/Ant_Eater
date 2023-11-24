@@ -50,7 +50,11 @@ class GameObject:
         """
         Размещение объекта на поле.
         """
-        empty_cells = [(y, x) for y in range(field.rows) for x in range(field.cols) if field.cells[y][x].content is None]
+        empty_cells = []
+        for y in range(field.rows):
+            for x in range(field.cols):
+                if field.cells[y][x].content is None:
+                    empty_cells.append((y, x))
         if empty_cells:
             y, x = random.choice(empty_cells)
             self.Y, self.X = y, x
@@ -117,7 +121,12 @@ class Field:
         """
         self.rows = ROWS
         self.cols = COLS
-        self.cells = [[cell(Y=y, X=x) for x in range(COLS)] for y in range(ROWS)]
+        self.cells = []
+        for y in range(ROWS):
+            row = []
+            for x in range(COLS):
+                row.append(cell(Y=y, X=x))
+            self.cells.append(row)
         self.player = player(
             Y=random.randint(0, ROWS - 1),
             X=random.randint(0, COLS - 1)
