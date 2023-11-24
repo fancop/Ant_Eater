@@ -5,7 +5,10 @@ import os
 COLS = 10
 ROWS = 10
 EMPTY = '.'
-PLAYER = 'A'
+PLAYER = 'P'
+ANTHILLS = 'A'
+ANTHILLS_MAX = 4
+ANTHILLS_MIN = 1
 
 class Cell:
     """
@@ -31,7 +34,32 @@ class Cell:
             print(self.image, end=' ')
 
 
-class Player:
+class GameObject:
+    """
+    Класс GameObject представляет базовый объект на игровом поле.
+    """
+    def __init__(self, image, Y=None, X=None):
+        """
+        Инициализация объекта GameObject.
+        """
+        self.image = image
+        self.Y = Y
+        self.X = X
+
+    def place_object(self, field):
+        """
+        Размещение объекта на поле.
+        """
+        empty_cells = [(y, x) for y in range(field.rows) for x in range(field.cols) if field.cells[y][x].content is None]
+        if empty_cells:
+            y, x = random.choice(empty_cells)
+            self.Y, self.X = y, x
+            field.cells[y][x].content = self
+        else:
+            print(f"Нет пустых клеток для размещения {self.image}.")
+
+
+class Player(GameObject):
     """
     Класс Player представляет игрока на поле.
     """
@@ -39,9 +67,7 @@ class Player:
         """
         Инициализация объекта Player.
         """
-        self.image = PLAYER
-        self.Y = Y
-        self.X = X
+        super().__init__(image=PLAYER, Y=Y, X=X)
 
     def move_player(self, direction, field):
         """
@@ -64,19 +90,44 @@ class Player:
             field.cells[self.Y][self.X].content = self
 
 
+class Anthill(GameObject):
+    """
+    Класс Anthill представляет муравейник на поле.
+    """
+    def __init__(self, Y=None, X=None):
+        """
+        Инициализация объекта Anthill.
+        """
+        super().__init__(image=ANTHILLS, Y=Y, X=X)
+
+    def place_anthill(self, field):
+        """
+        Размещение муравейника на поле.
+        """
+        super().place_object(field)
+
+
 class Field:
     """
     Класс Field представляет игровое поле.
     """
-    def __init__(self, cell=Cell, player=Player):
+    def __init__(self, cell=Cell, player=Player, anthill=Anthill):
         """
         Инициализация объекта Field.
         """
         self.rows = ROWS
         self.cols = COLS
         self.cells = [[cell(Y=y, X=x) for x in range(COLS)] for y in range(ROWS)]
-        self.player = player(Y=random.randint(0, ROWS - 1), X=random.randint(0, COLS - 1))
+        self.player = player(
+            Y=random.randint(0, ROWS - 1),
+            X=random.randint(0, COLS - 1)
+        )
         self.cells[self.player.Y][self.player.X].content = self.player
+
+        anthill_count = random.randint(ANTHILLS_MIN, ANTHILLS_MAX)
+        self.anthills = [anthill() for _ in range(anthill_count)]
+        for anthill in self.anthills:
+            anthill.place_anthill(self)
 
     def draw_rows(self):
         """
