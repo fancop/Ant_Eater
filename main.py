@@ -1,157 +1,172 @@
 import keyboard
-import random
 import os
+import random
 
 COLS = 10
 ROWS = 10
 EMPTY = '.'
 PLAYER = 'P'
-ANTHILLS = 'A'
-ANTHILLS_MAX = 4
-ANTHILLS_MIN = 1
+ANT = 'a'
+ANTHILL = 'A'
+ANTHILL_MAX = 4
+ANTHILL_MIN = 1
+ANTS_IN_ANTHILL_MAX = 10
+ANTS_IN_ANTHILL_MIN = 1
+
+
+class GameObject:
+    def __init__(self, y, x, image):
+        self.y = y
+        self.x = x
+        self.image = image
+
+    def move(self, direction, field):
+        new_y, new_x = self.y, self.x
+
+        if direction == 'up' and self.y > 0 and not isinstance(field.cells[self.y - 1][self.x].content, Anthill):
+            new_y -= 1
+        elif direction == "down" and self.y < field.rows - 1 and not isinstance(field.cells[self.y + 1][self.x].content, Anthill):
+            new_y += 1
+        elif direction == "left" and self.x > 0 and not isinstance(field.cells[self.y][self.x - 1].content, Anthill):
+            new_x -= 1
+        elif direction == "right" and self.x < field.cols - 1 and not isinstance(field.cells[self.y][self.x + 1].content, Anthill):
+            new_x += 1
+
+        field.cells[self.y][self.x].content = None
+        self.y, self.x = new_y, new_x
+        field.cells[self.y][self.x].content = self
+
+    def place_object(self, field):
+        if field.cells[self.y][self.x].content is None:
+            field.cells[self.y][self.x].content = self
+        else:
+            empty_cells = [(i, j) for i in range(field.rows) for j in range(field.cols) if field.cells[i][j].content is None]
+            if empty_cells:
+                new_y, new_x = random.choice(empty_cells)
+                field.cells[new_y][new_x].content = self
+                self.y, self.x = new_y, new_x
+            else:
+                print(f"No space available for {self.image}!")
+
+    def draw(self, field):
+        field.cells[self.y][self.x].content = self
+
 
 class Cell:
-    """
-    Класс Cell представляет отдельную ячейку на игровом поле.
-    """
     def __init__(self, Y=None, X=None):
-        """
-        Инициализация объекта Cell.
-        """
         self.image = EMPTY
         self.Y = Y
         self.X = X
         self.content = None
 
     def draw(self):
-        """
-        Отображение содержимого ячейки.
-        Если ячейка пуста, отображается символ EMPTY, иначе отображается символ содержимого.
-        """
         if self.content:
             print(self.content.image, end=' ')
         else:
             print(self.image, end=' ')
 
 
-class GameObject:
-    """
-    Класс GameObject представляет базовый объект на игровом поле.
-    """
-    def __init__(self, image, Y=None, X=None):
-        """
-        Инициализация объекта GameObject.
-        """
-        self.image = image
-        self.Y = Y
-        self.X = X
-
-    def place_object(self, field):
-        """
-        Размещение объекта на поле.
-        """
-        empty_cells = []
-        for y in range(field.rows):
-            for x in range(field.cols):
-                if field.cells[y][x].content is None:
-                    empty_cells.append((y, x))
-        if empty_cells:
-            y, x = random.choice(empty_cells)
-            self.Y, self.X = y, x
-            field.cells[y][x].content = self
-        else:
-            print(f"Нет пустых клеток для размещения {self.image}.")
-
-
 class Player(GameObject):
-    """
-    Класс Player представляет игрока на поле.
-    """
-    def __init__(self, Y=None, X=None):
-        """
-        Инициализация объекта Player.
-        """
-        super().__init__(image=PLAYER, Y=Y, X=X)
+    def __init__(self, y=None, x=None):
+        super().__init__(y, x, PLAYER)
 
-    def move_player(self, direction, field):
-        """
-        Перемещение игрока на поле.
-        """
-        new_Y, new_X = self.Y, self.X
+    def move(self, direction, field):
+        super().move(direction, field)
 
-        if direction == 'up' and self.Y > 0:
-            new_Y -= 1
-        elif direction == 'down' and self.Y < field.rows - 1:
-            new_Y += 1
-        elif direction == 'left' and self.X > 0:
-            new_X -= 1
-        elif direction == 'right' and self.X < field.cols - 1:
-            new_X += 1
-
-        if field.cells[new_Y][new_X].content is None:
-            field.cells[self.Y][self.X].content = None
-            self.Y, self.X = new_Y, new_X
-            field.cells[self.Y][self.X].content = self
-
+class Ant(GameObject):
+    def __init__(self, y, x):
+        super().__init__(y, x, ANT)
 
 class Anthill(GameObject):
-    """
-    Класс Anthill представляет муравейник на поле.
-    """
-    def __init__(self, Y=None, X=None):
-        """
-        Инициализация объекта Anthill.
-        """
-        super().__init__(image=ANTHILLS, Y=Y, X=X)
+    def __init__(self, x, y, quantity):
+        super().__init__(y, x, ANTHILL)
+        self.quantity = quantity
+        self.spawn_counter = 0  
+        self.ants_counter = random.randint(
+            ANTS_IN_ANTHILL_MIN, ANTS_IN_ANTHILL_MAX
+        )
 
-    def place_anthill(self, field):
-        """
-        Размещение муравейника на поле.
-        """
+    def place(self, field):
         super().place_object(field)
+
+    def draw(self, field):
+        super().draw(field)
 
 
 class Field:
-    """
-    Класс Field представляет игровое поле.
-    """
     def __init__(self, cell=Cell, player=Player, anthill=Anthill):
-        """
-        Инициализация объекта Field.
-        """
+        self.game_over = False
         self.rows = ROWS
         self.cols = COLS
-        self.cells = []
-        for y in range(ROWS):
-            row = []
-            for x in range(COLS):
-                row.append(cell(Y=y, X=x))
-            self.cells.append(row)
-        self.player = player(
-            Y=random.randint(0, ROWS - 1),
-            X=random.randint(0, COLS - 1)
-        )
-        self.cells[self.player.Y][self.player.X].content = self.player
-
-        anthill_count = random.randint(ANTHILLS_MIN, ANTHILLS_MAX)
-        self.anthills = [anthill() for _ in range(anthill_count)]
-        for anthill in self.anthills:
-            anthill.place_anthill(self)
-
-    def draw_rows(self):
-        """
-        Отображение всех строк игрового поля.
-        """
+        self.anthills = []
+        self.cells = [[cell(Y=y, X=x) for x in range(COLS)] for y in range(ROWS)]
+        self.player = player(y=random.randint(0, ROWS - 1), x=random.randint(0, COLS - 1))
+        self.player.place_object(self)
+        self.player.draw(self)
+        
+    def drawrows(self):
         for row in self.cells:
             for cell in row:
                 cell.draw()
             print()
 
+    def add_anthill(self, anthill):
+        self.anthills.append(anthill)
+        anthill.place_object(self)
+
+    def add_anthills(self):
+        available_cells = [(x, y) for x in range(self.cols) for y in range(self.rows) if (x, y) != (self.player.x, self.player.y)]
+
+        quantity = random.randint(ANTHILL_MIN, ANTHILL_MAX)
+        
+        for i in range(quantity):
+            if not available_cells:
+                break
+            anthill_x, anthill_y = random.choice(available_cells)
+            available_cells.remove((anthill_x, anthill_y))
+
+            anthill = Anthill(x=anthill_x, y=anthill_y, quantity=random.randint(ANTHILL_MIN, ANTHILL_MAX))
+            self.add_anthill(anthill)
+    
+    def spawn_ants(self):
+        for anthill in self.anthills:
+            if anthill.ants_counter > 0 and anthill.spawn_counter == 0:
+                # Получаем координаты муравейника
+                anthill_x, anthill_y = anthill.x, anthill.y
+
+                # Получаем координаты всех соседних клеток вокруг муравейника
+                neighbors = [
+                    (anthill_y - 1, anthill_x - 1), (anthill_y - 1, anthill_x), (anthill_y - 1, anthill_x + 1),
+                    (anthill_y, anthill_x - 1),                                 (anthill_y, anthill_x + 1),
+                    (anthill_y + 1, anthill_x - 1), (anthill_y + 1, anthill_x), (anthill_y + 1, anthill_x + 1)
+                ]
+
+                # Фильтруем только пустые клетки
+                empty_neighbors = [(y, x) for y, x in neighbors if 0 <= y < self.rows and 0 <= x < self.cols and not self.cells[y][x].content]
+
+                # Выбираем случайную пустую клетку, если они есть
+                if empty_neighbors:
+                    ant_y, ant_x = random.choice(empty_neighbors)
+                    ant = Ant(y=ant_y, x=ant_x)
+                    self.cells[ant_y][ant_x].content = ant
+                    anthill.ants_counter -= 1
+                    anthill.spawn_counter = 1 
+
+            if anthill.spawn_counter > 0:
+                anthill.spawn_counter += 1
+                if anthill.spawn_counter > 5: 
+                    anthill.spawn_counter = 0
+
+        # Проверка на наличие муравьев во всех муравейниках
+        total_ants = sum(anthill.ants_counter for anthill in self.anthills)
+        
+        # Проверка на наличие муравьев на поле
+        ants_on_field = any(cell.content and isinstance(cell.content, Ant) for row in self.cells for cell in row)
+
+        if total_ants == 0 and not ants_on_field:
+            self.game_over = True
 
 def clear_screen():
-    """
-    Очистка экрана консоли, учитывая операционную систему.
-    """
     if os.name == 'nt':
         os.system('cls')
     else:
@@ -159,44 +174,44 @@ def clear_screen():
 
 
 class Game:
-    """
-    Класс Game представляет игровой процесс.
-    """
-
     def __init__(self):
-        """
-        Инициализация объекта Game.
-        """
         self.field = Field()
+        self.field.add_anthills()
+
+    def handle_keyboard_event(self, event):
+        if event.event_type == keyboard.KEY_DOWN:
+            if event.name == "up":
+                self.field.player.move("up", self.field)
+            elif event.name == "down":
+                self.field.player.move("down", self.field)
+            elif event.name == "left":
+                self.field.player.move("left", self.field)
+            elif event.name == "right":
+                self.field.player.move("right", self.field)
+            elif event.name == 'esc':
+                print("Игра закончена!")
+                return True
+        return False
+
+    def update_game_state(self):
+        clear_screen()
+        self.field.drawrows()
+        self.field.spawn_ants()
+        
+        if self.field.game_over:
+            print("Все муравьи съедены или убежали. Игра закончена!")       
+
 
     def run(self):
-        """
-        Запуск игрового процесса.
-        """
-        self.field.draw_rows()
+        self.field.drawrows()
 
-        while True:
-            key = keyboard.read_event(suppress=True)
-            if key.event_type == keyboard.KEY_DOWN:
-                if key.name == 'esc':
-                    print("Game over")
-                    return
-                if key.name == 'up':
-                    self.field.player.move_player('up', self.field)
-                    clear_screen()
-                    self.field.draw_rows()
-                elif key.name == 'down':
-                    self.field.player.move_player('down', self.field)
-                    clear_screen()
-                    self.field.draw_rows()
-                elif key.name == 'left':
-                    self.field.player.move_player('left', self.field)
-                    clear_screen()
-                    self.field.draw_rows()
-                elif key.name == 'right':
-                    self.field.player.move_player('right', self.field)
-                    clear_screen()
-                    self.field.draw_rows()
+        while not self.field.game_over:
+            event = keyboard.read_event(suppress=True)
+            if self.handle_keyboard_event(event):
+                break
+
+            self.update_game_state()
+
 
 Ant_Eater = Game()
 Ant_Eater.run()
