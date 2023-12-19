@@ -10,8 +10,8 @@ ANT = 'a'
 ANTHILL = 'A'
 ANTHILL_MAX = 4
 ANTHILL_MIN = 1
-ANTS_IN_ANTHILL_MAX = 10
-ANTS_IN_ANTHILL_MIN = 1
+ANTS_PER_ANTHILL_MAX = 10
+ANTS_PER_ANTHILL_MIN = 1
 
 
 class GameObject:
@@ -83,7 +83,7 @@ class Anthill(GameObject):
         self.quantity = quantity
         self.spawn_counter = 0  
         self.ants_counter = random.randint(
-            ANTS_IN_ANTHILL_MIN, ANTS_IN_ANTHILL_MAX
+            ANTS_PER_ANTHILL_MIN, ANTS_PER_ANTHILL_MAX
         )
 
     def place(self, field):
@@ -98,7 +98,9 @@ class Field:
         self.game_over = False
         self.rows = ROWS
         self.cols = COLS
+        self.eaten_ants = 0
         self.anthills = []
+        self.ants = []
         self.cells = [[cell(Y=y, X=x) for x in range(COLS)] for y in range(ROWS)]
         self.player = player(y=random.randint(0, ROWS - 1), x=random.randint(0, COLS - 1))
         self.player.place_object(self)
@@ -114,11 +116,23 @@ class Field:
         self.anthills.append(anthill)
         anthill.place_object(self)
 
+    def get_neighbours(self, y, x):
+        neighbours_coords = []
+        for row in (-1, 0, 1):
+            for col in (-1, 0, 1):
+                if row == 0 and col == 0:
+                    continue
+                neighbours_coords.append(
+                    (y + row, x + col)
+                )
+        return neighbours_coords
+
     def add_anthills(self):
-        available_cells = [(x, y) for x in range(self.cols) for y in range(self.rows) if (x, y) != (self.player.x, self.player.y)]
+        available_cells = [(x, y) for x in range(self.cols) for y in range(self.rows) if
+                           (x, y) != (self.player.x, self.player.y)]
 
         quantity = random.randint(ANTHILL_MIN, ANTHILL_MAX)
-        
+
         for i in range(quantity):
             if not available_cells:
                 break
@@ -127,35 +141,58 @@ class Field:
 
             anthill = Anthill(x=anthill_x, y=anthill_y, quantity=random.randint(ANTHILL_MIN, ANTHILL_MAX))
             self.add_anthill(anthill)
+
+        anthill.place_object(self)
     
     def spawn_ants(self):
         for anthill in self.anthills:
             if anthill.ants_counter > 0 and anthill.spawn_counter == 0:
-                # Получаем координаты муравейника
                 anthill_x, anthill_y = anthill.x, anthill.y
-
-                # Получаем координаты всех соседних клеток вокруг муравейника
                 neighbors = [
                     (anthill_y - 1, anthill_x - 1), (anthill_y - 1, anthill_x), (anthill_y - 1, anthill_x + 1),
-                    (anthill_y, anthill_x - 1),                                 (anthill_y, anthill_x + 1),
+                    (anthill_y, anthill_x - 1), (anthill_y, anthill_x + 1),
                     (anthill_y + 1, anthill_x - 1), (anthill_y + 1, anthill_x), (anthill_y + 1, anthill_x + 1)
                 ]
-
-                # Фильтруем только пустые клетки
                 empty_neighbors = [(y, x) for y, x in neighbors if 0 <= y < self.rows and 0 <= x < self.cols and not self.cells[y][x].content]
-
-                # Выбираем случайную пустую клетку, если они есть
                 if empty_neighbors:
                     ant_y, ant_x = random.choice(empty_neighbors)
                     ant = Ant(y=ant_y, x=ant_x)
                     self.cells[ant_y][ant_x].content = ant
                     anthill.ants_counter -= 1
-                    anthill.spawn_counter = 1 
+                    anthill.spawn_counter = 1
+                    self.ants.append(ant)
 
             if anthill.spawn_counter > 0:
                 anthill.spawn_counter += 1
-                if anthill.spawn_counter > 5: 
+                if anthill.spawn_counter > 5:
                     anthill.spawn_counter = 0
+
+        # Move ants after spawning
+        self.move_ants()
+
+    def move_ants(self):
+        for ant in self.ants:
+            neighbours_coords = self.get_neighbours(ant.y, ant.x)
+            random.shuffle(neighbours_coords)
+            for y, x in neighbours_coords:
+                if y < 0 or y > self.rows - 1 or x < 0 or x > self.cols - 1:
+                    if ant in self.ants:
+                        self.ants.remove(ant)
+                        self.cells[ant.y][ant.x].content = None
+                    break
+
+                new_cell = self.cells[y][x]
+                if new_cell.content:
+                    if isinstance(new_cell.content, Player):
+                        self.eaten_ants += 1
+                        self.ants.remove(ant)
+                        self.cells[ant.y][ant.x].content = None
+                    continue
+                self.cells[ant.y][ant.x].content = None
+                new_cell.content = ant
+                ant.y = y
+                ant.x = x
+                break
 
         # Проверка на наличие муравьев во всех муравейниках
         total_ants = sum(anthill.ants_counter for anthill in self.anthills)
@@ -165,6 +202,10 @@ class Field:
 
         if total_ants == 0 and not ants_on_field:
             self.game_over = True
+    
+    def update_statistics(self):
+        print("Статистика:")
+        print(f"Съедено муравьев: {self.eaten_ants}")
 
 def clear_screen():
     if os.name == 'nt':
@@ -211,6 +252,8 @@ class Game:
                 break
 
             self.update_game_state()
+
+        self.field.update_statistics()
 
 
 Ant_Eater = Game()
