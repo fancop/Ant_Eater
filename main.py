@@ -260,7 +260,7 @@ class Field:
 
             if anthill.spawn_counter > 0:
                 anthill.spawn_counter += 1
-                if anthill.spawn_counter > 5:
+                if anthill.spawn_counter > 4:
                     anthill.spawn_counter = 0
 
         self.move_ants()
@@ -311,6 +311,7 @@ class Field:
         print(f"Все муравьи: {self.total_ants}")
         print(f"Съеденные мураьи: {self.eaten_ants}")
         print(f"Сбежавшие муравьи: {self.escaped_ants}")
+        input('Если вы посмотрели статистику, то нажмите ENTER, чтобы закончить игру')
 
 
 def clear_screen():
