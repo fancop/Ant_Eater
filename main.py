@@ -13,6 +13,7 @@ ANTHILL_MIN = 1
 ANTS_PER_ANTHILL_MAX = 10
 ANTS_PER_ANTHILL_MIN = 1
 
+
 class GameObject:
     '''
     Базовый класс для всех игровых объектов.
@@ -137,12 +138,16 @@ class Anthill(GameObject):
 
     def __init__(self, x, y, quantity):
         '''
-        Инициализация муравейника с указанными координатами и количеством муравьев.
+        Инициализация муравейника
+        с указанными координатами и количеством муравьев.
         '''
         super().__init__(y, x, ANTHILL)
         self.quantity = quantity
         self.spawn_counter = 0
-        self.ants_counter = random.randint(ANTS_PER_ANTHILL_MIN, ANTS_PER_ANTHILL_MAX)
+        self.ants_counter = random.randint(
+            ANTS_PER_ANTHILL_MIN,
+            ANTS_PER_ANTHILL_MAX
+        )
 
     def place(self, field):
         '''
@@ -174,8 +179,14 @@ class Field:
         self.total_ants = 0
         self.anthills = []
         self.ants = []
-        self.cells = [[cell(Y=y, X=x) for x in range(COLS)] for y in range(ROWS)]
-        self.player = player(y=random.randint(0, ROWS - 1), x=random.randint(0, COLS - 1))
+        self.cells = [
+            [cell(Y=y, X=x) for x in range(COLS)] 
+            for y in range(ROWS)
+        ]
+        self.player = player(
+            y=random.randint(0, ROWS - 1),
+            x=random.randint(0, COLS - 1)
+        )
         self.player.place_object(self)
         self.player.draw(self)
 
@@ -212,7 +223,10 @@ class Field:
         Добавляет случайное количество муравейников на игровое поле.
         '''
         available_cells = [
-            (x, y) for x in range(self.cols) for y in range(self.rows) if (x, y) != (self.player.x, self.player.y)
+            (x, y)
+            for x in range(self.cols)
+            for y in range(self.rows)
+            if (x, y) != (self.player.x, self.player.y)
         ]
 
         quantity = random.randint(ANTHILL_MIN, ANTHILL_MAX)
@@ -222,8 +236,11 @@ class Field:
                 break
             anthill_x, anthill_y = random.choice(available_cells)
             available_cells.remove((anthill_x, anthill_y))
-
-            anthill = Anthill(x=anthill_x, y=anthill_y, quantity=random.randint(ANTHILL_MIN, ANTHILL_MAX))
+            anthill = Anthill(
+                x=anthill_x,
+                y=anthill_y,
+                quantity=random.randint(ANTHILL_MIN, ANTHILL_MAX)
+            )
             self.add_anthill(anthill)
 
         anthill.place_object(self)
@@ -248,7 +265,8 @@ class Field:
                 empty_neighbors = [
                     (y, x)
                     for y, x in neighbors
-                    if 0 <= y < self.rows and 0 <= x < self.cols and not self.cells[y][x].content
+                    if 0 <= y < self.rows and 0 <= x < self.cols
+                    and not self.cells[y][x].content
                 ]
                 if empty_neighbors:
                     ant_y, ant_x = random.choice(empty_neighbors)
@@ -296,7 +314,8 @@ class Field:
         total_ants = sum(anthill.ants_counter for anthill in self.anthills)
 
         ants_on_field = any(
-            cell.content and isinstance(cell.content, Ant) for row in self.cells for cell in row
+            cell.content and isinstance(cell.content, Ant)
+            for row in self.cells for cell in row
         )
 
         if total_ants == 0 and not ants_on_field:
@@ -304,7 +323,8 @@ class Field:
 
     def update_statistics(self):
         '''
-        Обновляет статистику по съеденным и сбежавшим муравьям и выводит ее на экран.
+        Обновляет статистику по съеденным и сбежавшим муравьям
+        Выводит ее на экран.
         '''
         self.total_ants = self.eaten_ants + self.escaped_ants
         print('Статистика:')
@@ -338,7 +358,8 @@ class Game:
 
     def handle_keyboard_event(self, event):
         '''
-        Обрабатывает события клавиатуры и перемещает игрока в соответствии с нажатой клавишей.
+        Обрабатывает события клавиатуры
+        Перемещает игрока в соответствии с нажатой клавишей.
         '''
         if event.event_type == keyboard.KEY_DOWN:
             if event.name == 'up':
@@ -356,7 +377,8 @@ class Game:
 
     def update_game_state(self):
         '''
-        Обновляет состояние игры: рисует поле, создает новых муравьев и проверяет условия завершения игры.
+        Обновляет состояние игры: рисует поле, создает новых муравьев
+        Проверяет условия завершения игры.
         '''
         clear_screen()
         self.field.draw_rows()
