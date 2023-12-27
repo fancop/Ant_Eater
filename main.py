@@ -311,14 +311,14 @@ class Field:
                 ant.x = x
                 break
 
-        total_ants = sum(anthill.ants_counter for anthill in self.anthills)
+        ants_in_anthill = sum(anthill.ants_counter for anthill in self.anthills)
 
         ants_on_field = any(
             cell.content and isinstance(cell.content, Ant)
             for row in self.cells for cell in row
         )
 
-        if total_ants == 0 and not ants_on_field:
+        if ants_in_anthill == 0 and not ants_on_field:
             self.game_over = True
 
     def update_statistics(self):
